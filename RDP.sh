@@ -23,6 +23,8 @@ sudo apt install --assume-yes --fix-broken
 sudo apt install nautilus nano -y 
 sudo apt -y install obs-studio
 sudo apt -y install firefox
+sudo apt-get install xfce4-terminal
+sudo update-alternatives --config x-terminal-emulator
 sudo adduser ALOK chrome-remote-desktop
 } &> /dev/null &&
 printf "\nSetup Completed " >&2 ||
