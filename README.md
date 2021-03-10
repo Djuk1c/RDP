@@ -1,5 +1,5 @@
 ### Usage
 
-! wget https://raw.githubusercontent.com/Djuk1c/RDP/main/RDP.sh &> /dev/null
-! chmod +x RDP.sh
-! ./RDP.sh
+! wget https://raw.githubusercontent.com/Djuk1c/RDP/main/RDP.sh &> /dev/null<br/>
+! chmod +x RDP.sh<br/>
+! ./RDP.sh<br/>
